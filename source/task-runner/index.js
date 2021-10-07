@@ -18,7 +18,7 @@ exports.handler = async (event, context) => {
 
     const { scenario } = event;
     const { testId, taskCount, testType, fileType } = scenario;
-    const API_INTERVAL = parseFloat(process.env.API_INTERVAL) || 10;
+    const API_INTERVAL =  5 || parseFloat(process.env.API_INTERVAL) || 10;
     let runTaskCount = event.taskRunner ? event.taskRunner.runTaskCount : taskCount;
     let timeRemaining;
     let isRunning = true;
@@ -174,7 +174,7 @@ exports.handler = async (event, context) => {
                 leaderParams.overrides.containerOverrides[0].environment.forEach(item => {
                     if (item.name === 'SCRIPT') item.value = "ecscontroller.py";
                 });
-
+                leaderParams.overrides.containerOverrides[0].environment.push({name: "TASK_NUMBER", value: '1'});
                 //run leader node task
                 console.log('STARTING LEADER NODE AND RUNNING TESTS');
                 await ecs.runTask(leaderParams).promise();
@@ -191,11 +191,12 @@ exports.handler = async (event, context) => {
             //function to run workers, and keep track of amount run
             let launchWorkers = async (runTaskCount, params) => {
                 //adjust parameters if less than 10
-                const count = runTaskCount > 10 ? 10 : runTaskCount - 1;
+                const count = 1; //runTaskCount > 10 ? 10 : runTaskCount - 1;
                 let taskParams = count >= 10 ? params : Object.assign({}, params);
                 taskParams.count = count;
                 //run tasks
                 console.log(`STARTING ${count} WORKER TASKS`);
+                taskParams.overrides.containerOverrides[0].environment.push({name: "TASK_NUMBER", value: runTaskCount.toString()});
                 runTaskResponse = await ecs.runTask(taskParams).promise();
                 //get amount succesfully launched
                 let actualLaunched = runTaskResponse.tasks.length;
